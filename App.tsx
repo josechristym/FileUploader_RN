@@ -1,86 +1,84 @@
-import * as React from 'react'
-
-import { StyleSheet, View, Text, Button } from 'react-native'
+import * as React from 'react';
+import { StyleSheet, View, Text, Button } from 'react-native';
 import DocumentPicker, {
   DirectoryPickerResponse,
   DocumentPickerResponse,
   isCancel,
   isInProgress,
   types,
-} from 'react-native-document-picker'
-import { useEffect } from 'react'
-import { Client } from 'ssh2-sftp-client';
+} from 'react-native-document-picker';
+import { useState, useEffect } from 'react';
+import SSHClient from '@dylankenneally/react-native-ssh-sftp';
 
 export default function App() {
-
-  const [result, setResult] = React.useState<
+  const [result, setResult] = useState<
     Array<DocumentPickerResponse> | DirectoryPickerResponse | undefined | null
-  >()
+  >();
 
   useEffect(() => {
-    console.log(JSON.stringify(result, null, 2))
-    uploadFile()
-  }, [result])
+    console.log(JSON.stringify(result, null, 2));
+    if (result) {
+      uploadFile(result);
+    }
+  }, [result]);
 
-  const uploadFile = async () => {
-    const sftp = new Client();
+  const uploadFile = async (file: DocumentPickerResponse | DocumentPickerResponse[]) => {
     try {
-      await sftp.connect({
-        host: 'tallycloud.me',
-        port: 22,
-        username: 'Finexsftptest',
-        password: 'Integration@2023'
-      });
-  
-      if (Array.isArray(result)) {
-        for (const file of result) {
-          const localFilePath = file.uri;
-          await sftp.putFile(localFilePath, "/C:/SFTPTest");
-        }
-      } else if(result){
-        const localFilePath = result.uri; 
-        await sftp.putFile(localFilePath, "/C:/SFTPTest");
+      const client = await SSHClient.connectWithPassword(
+        "77.92.187.10",
+        22,
+        "Finexsftptest",
+        "Integration@2023"
+      );
+      console.log("Connected client", client);
+
+      const filesToUpload = Array.isArray(file) ? file : [file];
+
+      for (const selectedFile of filesToUpload) {
+        const localFilePath = selectedFile.uri;
+        console.log("localFilePath", localFilePath);
+        await client.sftpUpload(localFilePath, "/C:/SFTPTest/");
+        console.log("File upload success");
       }
-      console.log('Files uploaded successfully');
+
+      client.disconnect(); // Disconnect after uploading all files
     } catch (error) {
       console.error('Error uploading files:', error);
-    } finally {
-      await sftp.end();
     }
-  }
-  
+  };
 
   const handleError = (err: unknown) => {
     if (isCancel(err)) {
-      console.warn('cancelled')
+      console.warn('cancelled');
       // User cancelled the picker, exit any dialogs or menus and move on
     } else if (isInProgress(err)) {
-      console.warn('multiple pickers were opened, only the last will be considered')
+      console.warn('multiple pickers were opened, only the last will be considered');
     } else {
-      throw err
+      throw err;
     }
-  }
+  };
 
   return (
     <View style={styles.container}>
-      
       <Button
-        title="open picker for multi file selection"
+        title="Open picker for multi file selection"
         onPress={() => {
-          DocumentPicker.pick({ allowMultiSelection: true }).then(setResult).catch(handleError)
+          DocumentPicker.pick({ allowMultiSelection: true })
+            .then((pickedFiles) => setResult(pickedFiles))
+            .catch(handleError);
         }}
       />
-      
       <Button
-        title="open directory picker"
+        title="Open directory picker"
         onPress={() => {
-          DocumentPicker.pickDirectory().then(setResult).catch(handleError)
+          DocumentPicker.pickDirectory()
+            .then((pickedDirectory) => setResult(pickedDirectory))
+            .catch(handleError);
         }}
       />
-
       <Text selectable>Result: {JSON.stringify(result, null, 2)}</Text>
     </View>
-  )
+  );
 }
 
 const styles = StyleSheet.create({
@@ -90,9 +88,4 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'white',
   },
-  box: {
-    width: 60,
-    height: 60,
-    marginVertical: 20,
-  },
-})
+});
