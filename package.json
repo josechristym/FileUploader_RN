@@ -10,10 +10,12 @@
     "test": "jest"
   },
   "dependencies": {
+    "@dylankenneally/react-native-ssh-sftp": "^1.5.9",
     "react": "18.2.0",
     "react-native": "0.73.5",
+    "react-native-camera-kit": "^13.0.0",
     "react-native-document-picker": "^9.1.1",
-    "ssh2-sftp-client": "^10.0.3"
+    "react-native-fs": "^2.20.0"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0",
